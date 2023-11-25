@@ -1,18 +1,45 @@
-
 import 'package:flutter/cupertino.dart';
 
-class TextHandleCustomPainter extends CustomPainter {
-  const TextHandleCustomPainter(this.color);
+enum Radius {
+  small(4),
+  normal(6),
+  medium(8),
+  large(10);
+
+  const Radius(this.radius);
+
+  final double radius;
+
+  double get offsetWithY => switch (this) {
+        Radius.small => 8,
+        Radius.normal => 6,
+        Radius.medium => 4,
+        Radius.large => 2,
+      };
+}
+
+CustomPainter textHandleCustomPainter({
+  required Color color,
+  required Radius radius,
+}) =>
+    _TextHandleCustomPainter(color: color, radius: radius);
+
+class _TextHandleCustomPainter extends CustomPainter {
+  const _TextHandleCustomPainter({
+    required this.color,
+    required this.radius,
+  });
 
   final Color color;
+  final Radius radius;
 
   @override
   void paint(Canvas canvas, Size size) {
     const double halfStrokeWidth = 1.0;
     final Paint paint = Paint()..color = color;
     final Rect circle = Rect.fromCircle(
-      center: const Offset(6, 6),
-      radius: 6,
+      center: Offset(6, radius.offsetWithY),
+      radius: radius.radius,
     );
     final Rect line = Rect.fromPoints(
       const Offset(
@@ -23,11 +50,11 @@ class TextHandleCustomPainter extends CustomPainter {
     );
     final Path path = Path()
       ..addOval(circle)
-    // Draw line so it slightly overlaps the circle.
       ..addRect(line);
     canvas.drawPath(path, paint);
   }
 
   @override
-  bool shouldRepaint(TextHandleCustomPainter oldDelegate) => color != oldDelegate.color;
+  bool shouldRepaint(_TextHandleCustomPainter oldDelegate) =>
+      color != oldDelegate.color;
 }

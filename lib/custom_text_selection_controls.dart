@@ -1,42 +1,59 @@
+import 'dart:math' as math;
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/src/foundation/change_notifier.dart';
 import 'package:flutter_text_handle/text_handle_custom_painter.dart';
 
-class CustomTextSelectionControls extends TextSelectionControls {
-  CustomTextSelectionControls({this.color = Colors.red});
+const double _kHandleSize = 22.0;
+const double _kSelectionHandleOverlap = 1.5;
+// Extracted from https://developer.apple.com/design/resources/.
+const double _kSelectionHandleRadius = 6;
 
-  final Color color;
+class CupertinoHandleControls extends CupertinoTextSelectionControls {
+  CupertinoHandleControls({
+    required this.color,
+    required this.radius,
+  });
+
+  final Color? color;
+  final Radius radius;
 
   @override
   Widget buildHandle(
-      BuildContext context, TextSelectionHandleType type, double textLineHeight,
-      [VoidCallback? onTap]) {
+    BuildContext context,
+    TextSelectionHandleType type,
+    double textLineHeight, [
+    VoidCallback? onTap,
+  ]) {
     Widget customPaint = CustomPaint(
-      painter: TextHandleCustomPainter(color),
+      painter: textHandleCustomPainter(
+        color: color ?? CupertinoTheme.of(context).primaryColor,
+        radius: radius,
+      ),
     );
-    return SizedBox.fromSize(
-      size: getHandleSize(textLineHeight),
-      child: customPaint,
-    );
-  }
-
-  @override
-  Widget buildToolbar(
-      BuildContext context,
-      Rect globalEditableRegion,
-      double textLineHeight,
-      Offset selectionMidpoint,
-      List<TextSelectionPoint> endpoints,
-      TextSelectionDelegate delegate,
-      ValueListenable<ClipboardStatus>? clipboardStatus,
-      Offset? lastSecondaryTapDownPosition) {
-    return Text('data');
-  }
-
-  @override
-  Offset getHandleAnchor(TextSelectionHandleType type, double textLineHeight) {
-    final handleSize = getHandleSize(textLineHeight);
-    return Offset(handleSize.width / 2, handleSize.height);
+    switch (type) {
+      case TextSelectionHandleType.left:
+        final desiredSize = getHandleSize(textLineHeight);
+        return SizedBox.fromSize(
+          size: desiredSize,
+          child: customPaint,
+        );
+      case TextSelectionHandleType.right:
+        final desiredSize = getHandleSize(textLineHeight);
+        final handle = SizedBox.fromSize(
+          size: desiredSize,
+          child: customPaint,
+        );
+        return Transform(
+          transform: Matrix4.identity()
+            ..translate(desiredSize.width / 2, desiredSize.height / 2)
+            ..rotateZ(math.pi)
+            ..translate(-desiredSize.width / 2, -desiredSize.height / 2),
+          child: handle,
+        );
+      case TextSelectionHandleType.collapsed:
+        return const SizedBox.shrink();
+    }
   }
 
   @override
@@ -48,6 +65,54 @@ class CustomTextSelectionControls extends TextSelectionControls {
   }
 }
 
-const double _kSelectionHandleOverlap = 1.5;
-// Extracted from https://developer.apple.com/design/resources/.
-const double _kSelectionHandleRadius = 6;
+class MaterialHandleControls extends MaterialTextSelectionControls {
+  MaterialHandleControls({
+    this.color,
+    required this.radius,
+  });
+
+  final Color? color;
+  final Radius radius;
+
+  @override
+  Widget buildHandle(
+    BuildContext context,
+    TextSelectionHandleType type,
+    double textHeight, [
+    VoidCallback? onTap,
+  ]) {
+    final ThemeData theme = Theme.of(context);
+
+    final Widget handle = SizedBox(
+      width: _kHandleSize,
+      height: _kHandleSize,
+      child: CustomPaint(
+        painter: textHandleCustomPainter(
+          color: color ??
+              TextSelectionTheme.of(context).selectionHandleColor ??
+              theme.colorScheme.primary,
+          radius: radius,
+        ),
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.translucent,
+        ),
+      ),
+    );
+
+    switch (type) {
+      case TextSelectionHandleType.left:
+        return Transform.rotate(
+          angle: math.pi / 2.0,
+          child: handle,
+        );
+      case TextSelectionHandleType.right:
+        return handle;
+      case TextSelectionHandleType.collapsed:
+        return Transform.rotate(
+          angle: math.pi / 4.0,
+          child: handle,
+        );
+    }
+  }
+}
